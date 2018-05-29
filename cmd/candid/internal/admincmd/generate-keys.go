@@ -23,8 +23,8 @@ func newGenerateKeysCommand(cc *candidCommand) cmd.Command {
 }
 
 var generateKeysDoc = `
-The generate-keys command generates a public/private that can be used in
-candid configuration.
+The generate-keys command generates a public/private keypair that can be used
+in candid configuration.
 `
 
 func (c *generateKeysCommand) Info() *cmd.Info {
