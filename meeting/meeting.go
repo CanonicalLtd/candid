@@ -422,6 +422,7 @@ func (p *Place) clientForId(ctx context.Context, id string) (*client, error) {
 	return &client{
 		Client: httprequest.Client{
 			BaseURL: "http://" + addr,
+			Doer:    defaultClient,
 		},
 	}, nil
 }
@@ -432,3 +433,18 @@ type noMetrics struct{}
 func (noMetrics) RequestCompleted(startTime time.Time) {}
 
 func (noMetrics) RequestsExpired(count int) {}
+
+var defaultClient = httpClient()
+
+func httpClient() *http.Client {
+	var rt http.RoundTripper
+	t, ok := http.DefaultTransport.(*http.Transport)
+	if ok {
+		t1 := *t
+		t1.Proxy = nil
+		rt = &t1
+	}
+	return &http.Client{
+		Transport: rt,
+	}
+}

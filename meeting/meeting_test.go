@@ -6,6 +6,7 @@ package meeting_test
 import (
 	"crypto/rand"
 	"fmt"
+	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -195,6 +196,75 @@ func (s *suite) TestRendezvousDifferentPlaces(c *gc.C) {
 	c.Assert(err, gc.ErrorMatches, `rendezvous ".*" not found`)
 
 	c.Assert(atomic.LoadInt32(&count), gc.Equals, int32(0))
+}
+
+func (s *suite) TestRendezvousDifferentPlacesIgnoreProxy(c *gc.C) {
+	s.PatchValue(&http.DefaultTransport, errorRoundTripper{})
+	s.PatchValue(&meeting.Clock, s.clock)
+	count := int32(0)
+	store := newFakeStore(&count, s.clock)
+	m1, err := meeting.NewPlace(meeting.Params{
+		Store:      store,
+		ListenAddr: "localhost",
+		DisableGC:  true,
+	})
+	c.Assert(err, gc.IsNil)
+	defer m1.Close()
+	m2, err := meeting.NewPlace(meeting.Params{
+		Store:      store,
+		ListenAddr: "localhost",
+	})
+	c.Assert(err, gc.IsNil)
+	defer m2.Close()
+	m3, err := meeting.NewPlace(meeting.Params{
+		Store:      store,
+		ListenAddr: "localhost",
+	})
+	c.Assert(err, gc.IsNil)
+	defer m3.Close()
+
+	ctx := context.Background()
+
+	// Create the rendezvous in m1.
+	id, err := newId()
+	c.Assert(err, gc.IsNil)
+	err = m1.NewRendezvous(ctx, id, []byte("first data"))
+	c.Assert(err, gc.IsNil)
+	c.Assert(id, gc.Not(gc.Equals), "")
+
+	// Wait for the rendezvous in m2.
+	waitDone := make(chan struct{})
+	go func() {
+		data0, data1, err := m2.Wait(ctx, id)
+		c.Check(err, gc.IsNil)
+		c.Check(string(data0), gc.Equals, "first data")
+		c.Check(string(data1), gc.Equals, "second data")
+
+		close(waitDone)
+	}()
+	s.clock.Advance(10 * time.Millisecond)
+	err = m3.Done(ctx, id, []byte("second data"))
+	c.Assert(err, gc.IsNil)
+
+	select {
+	case <-waitDone:
+	case <-time.After(2 * time.Second):
+		c.Errorf("timed out waiting for rendezvous")
+	}
+
+	// Check that item has now been deleted.
+	data0, data1, err := m3.Wait(ctx, id)
+	c.Assert(data0, gc.IsNil)
+	c.Assert(data1, gc.IsNil)
+	c.Assert(err, gc.ErrorMatches, `rendezvous ".*" not found`)
+
+	c.Assert(atomic.LoadInt32(&count), gc.Equals, int32(0))
+}
+
+type errorRoundTripper struct{}
+
+func (rt errorRoundTripper) RoundTrip(_ *http.Request) (*http.Response, error) {
+	return nil, errgo.New("test error")
 }
 
 func (s *suite) TestEntriesRemovedOnClose(c *gc.C) {
