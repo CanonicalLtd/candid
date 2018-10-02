@@ -113,14 +113,16 @@ func (h *handler) CreateAgent(p httprequest.Params, u *params.CreateAgentRequest
 		return nil, errgo.Notef(err, "cannot find identity for authenticated user")
 	}
 	if owner.ProviderID.Provider() == "idm" && owner.ProviderInfo["owner"] != nil {
-		// The authenticated user is an agent, so we don't allow it to create other agents.
-		// TODO a nicer way to do this check might be to express it as a group
-		// permission - all non-agent users are in the "can create agents" group.
-		// TODO In the future, we might allow agents to create other agents, but
-		// we'll have to work out what to do about hierarchy - if agent A creates
-		// agent B, then A is removed from a group but its owner is still a member
-		// of that group, should B still have access to the group?
-		return nil, errgo.Newf("cannot create an agent using an agent account")
+		// The authenticated user is an agent, so ensure that its part of the
+		// 'agent' group. Only agents in the agent group can create other agents.
+		if err := checkAuthIdentityIsMemberOf(ctx, ownerAuthIdentity, []string{"agent"}); err != nil {
+			return nil, errgo.Newf("agent doesn't have ability to create another agent account")
+		}
+
+		// The requested account cannot request access to the 'agent' group.
+		if hasGroup("agent", u.Groups) {
+			return nil, errgo.WithCausef(nil, params.ErrBadRequest, "agent cannot create another agent in the 'agent' group")
+		}
 	}
 	agentName, err := newAgentName()
 	if err != nil {
@@ -569,4 +571,13 @@ func newAgentName() (string, error) {
 		return "", errgo.Mask(err)
 	}
 	return fmt.Sprintf("a-%x", buf), nil
+}
+
+func hasGroup(group string, groups []string) bool {
+	for _, g := range groups {
+		if g == group {
+			return true
+		}
+	}
+	return false
 }

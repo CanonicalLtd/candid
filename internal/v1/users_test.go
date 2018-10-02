@@ -264,7 +264,7 @@ func (s *usersSuite) TestCreateAgent(c *gc.C) {
 	c.Assert(groups, gc.HasLen, 0)
 }
 
-func (s *usersSuite) TestCreateAgentAsAgent(c *gc.C) {
+func (s *usersSuite) TestCreateAgentAsAgentNotInAgentGroup(c *gc.C) {
 	client := s.IdentityClient(c, "testagent@candid", "testgroup")
 	_, err := client.CreateAgent(s.Ctx, &params.CreateAgentRequest{
 		CreateAgentBody: params.CreateAgentBody{
@@ -272,7 +272,30 @@ func (s *usersSuite) TestCreateAgentAsAgent(c *gc.C) {
 			PublicKeys: []*bakery.PublicKey{&pk1},
 		},
 	})
-	c.Assert(err, gc.ErrorMatches, `Post.*: cannot create an agent using an agent account`)
+	c.Assert(err, gc.ErrorMatches, `Post.*: agent doesn't have ability to create another agent account`)
+}
+
+func (s *usersSuite) TestCreateAgentAsAgentRequestInAgentGroup(c *gc.C) {
+	client := s.IdentityClient(c, "testagent@candid", "agent", "other")
+	_, err := client.CreateAgent(s.Ctx, &params.CreateAgentRequest{
+		CreateAgentBody: params.CreateAgentBody{
+			FullName:   "my agent",
+			PublicKeys: []*bakery.PublicKey{&pk1},
+			Groups:     []string{"other", "agent"},
+		},
+	})
+	c.Assert(err, gc.ErrorMatches, `Post.*: agent cannot create another agent in the 'agent' group`)
+}
+
+func (s *usersSuite) TestCreateAgentAsAgent(c *gc.C) {
+	client := s.IdentityClient(c, "testagent@candid", "agent", "other")
+	_, err := client.CreateAgent(s.Ctx, &params.CreateAgentRequest{
+		CreateAgentBody: params.CreateAgentBody{
+			PublicKeys: []*bakery.PublicKey{&pk1},
+			Groups:     []string{"other"},
+		},
+	})
+	c.Assert(err, gc.Equals, nil)
 }
 
 func (s *usersSuite) TestCreateAgentWithGroups(c *gc.C) {
