@@ -108,7 +108,11 @@ func (idp *identityProvider) GetGroups(ctx context.Context, identity *store.Iden
 	_, fulluser := identity.ProviderID.Split()
 	username := strings.SplitN(fulluser, "@", 2)[0]
 	if user, ok := idp.params.Users[username]; ok {
-		return user.Groups, nil
+		groups := make([]string, len(user.Groups))
+		for i, group := range user.Groups {
+			groups[i] = idputil.NameWithDomain(group, idp.params.Domain)
+		}
+		return groups, nil
 	}
 	return []string{}, nil
 }

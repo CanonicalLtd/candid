@@ -143,7 +143,7 @@ func (s *staticSuite) TestGetGroupsWithDomain(c *qt.C) {
 	})
 	groups, err := i.GetGroups(s.idptest.Ctx, identity)
 	c.Assert(err, qt.Equals, nil)
-	c.Assert(groups, qt.DeepEquals, []string{"group1", "group2"})
+	c.Assert(groups, qt.DeepEquals, []string{"group1@domain", "group2@domain"})
 }
 
 func (s *staticSuite) TestHandleFailedLoginWrongPassword(c *qt.C) {
