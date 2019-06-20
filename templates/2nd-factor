@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en">
+<head>
+  <title>Candid - 2-step verification</title>
+
+  <meta http-equiv="x-ua-compatible" content="IE=edge">
+  <meta charset="utf-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="">
+  <meta name="author" content="Juju team">
+  <link rel="shortcut icon" href="../../static/favicon.ico">
+  <link rel="stylesheet" href="../../static/css/vanilla.css">
+</head>
+
+<body>
+  <div class="p-strip">
+    <div class="row">
+      <div class="col-2 col-start-large-6 col-small-2 col-medium-3">
+        <img src="../../static/images/logo-canonical-aubergine.svg" alt="Canonical" />
+      </div>
+    </div>
+  </div>
+  <div class="p-strip">
+    <div class="row">
+      <div class="col-6 col-start-large-4">
+        <div class="p-card--highlighted">
+          <div class="p-card__thumbnail">
+            <h1 class="p-heading--four">2-step verification</h1>
+          </div>
+          <hr class="u-sv1">
+          {{if .Error}}
+            <div class="p-notification--negative">
+              <p class="p-notification__response">
+                <span class="p-notification__status">Error:</span>{{.Error}}
+              </p>
+            </div>
+          {{end}}
+          <form class="p-form" method="post" action="{{.Action}}">
+            <label for="verification-code">Verification code</label>
+            <input type="text" id="verification-code" name="verification-code" autocomplete="off">
+            <input type="checkbox" id="remember" checked="">
+            <label for="remember">Don’t ask again for this computer</label>
+            <br /><br />
+            <a href="/login" class="p-button--neutral u-float-left u-no-margin--bottom">Cancel</a>
+            <button type="submit" class="p-button--positive u-float-right u-no-margin--bottom">Login</button>
+          </form>
+        </div>
+        <div class="login__message"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
